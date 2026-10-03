@@ -1,0 +1,17 @@
+services:
+  api:
+    platform: linux/amd64
+    image: us-central1-docker.pkg.dev/meridian-healthcare-cost/my-docker-repo/healthcare-api:v1
+    volumes:
+      - dbdata:/data
+
+  web:
+    platform: linux/amd64
+    image: us-central1-docker.pkg.dev/meridian-healthcare-cost/my-docker-repo/healthcare-web:v1
+    ports:
+      - "5500:80"
+    depends_on:
+      - api
+
+volumes:
+  dbdata:

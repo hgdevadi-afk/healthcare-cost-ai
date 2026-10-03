@@ -1,0 +1,28 @@
+# Local Python environments and caches
+backend/.venv/
+**/__pycache__/
+*.py[cod]
+
+# Local runtime state
+.runtime/
+backend/healthcare_cost.db-journal
+backend/healthcare_cost.db-shm
+backend/healthcare_cost.db-wal
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Additional local-only files
+backend/venv/
+backend/healthcare_cost.db
+data/
+
+# Secrets and credentials
+.env
+.env.*
+*.pem
+*.key
+service-account*.json

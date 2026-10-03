@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Meridian — Healthcare Cost Intelligence</title><script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg: #050910;
+  --bg-deep: #030509;
+  --panel: rgba(15, 24, 38, 0.58);
+  --panel-solid: #0d1522;
+  --panel-border: rgba(120, 170, 190, 0.14);
+  --panel-border-strong: rgba(0, 229, 199, 0.32);
+  --vital: #00e5c7;
+  --vital-dim: rgba(0, 229, 199, 0.16);
+  --alert: #ff6b4a;
+  --alert-dim: rgba(255, 107, 74, 0.14);
+  --medium: #ffb84d;
+  --medium-dim: rgba(255, 184, 77, 0.14);
+  --violet: #8b7cff;
+  --violet-dim: rgba(139, 124, 255, 0.14);
+  --text: #e9eef4;
+  --text-muted: #7386a0;
+  --text-faint: #3f4f63;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Manrope', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+*{ box-sizing: border-box; margin:0; padding:0; }
+html,body{ height:100%; }
+body{
+  background: radial-gradient(ellipse 1200px 800px at 20% -10%, rgba(0,229,199,0.07), transparent 60%),
+              radial-gradient(ellipse 900px 700px at 100% 10%, rgba(139,124,255,0.06), transparent 55%),
+              var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection{ background: var(--vital-dim); color: var(--vital); }
+
+::-webkit-scrollbar{ width: 8px; height: 8px; }
+::-webkit-scrollbar-track{ background: transparent; }
+::-webkit-scrollbar-thumb{ background: rgba(120,170,190,0.2); border-radius: 4px; }
+
+a{ color: inherit; }
+button{ font-family: inherit; }
+
+/* ---------- Layout shell ---------- */
+.shell{
+  display: grid;
+  grid-template-columns: 84px 1fr;
+  min-height: 100vh;
+}
+
+/* ---------- Nav rail ---------- */
+.rail{
+  border-right: 1px solid var(--panel-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 22px 0 18px;
+  gap: 6px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  background: rgba(6, 11, 20, 0.4);
+}
+.rail-mark{
+  width: 40px; height: 40px;
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 30px;
+  background: linear-gradient(135deg, rgba(0,229,199,0.18), rgba(139,124,255,0.1));
+  border: 1px solid var(--panel-border-strong);
+}
+.rail-mark svg{ width: 20px; height: 20px; }
+.rail-nav{ display:flex; flex-direction:column; gap: 4px; flex: 1; }
+.rail-btn{
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: color .18s ease, background .18s ease, border-color .18s ease;
+}
+.rail-btn svg{ width: 20px; height: 20px; }
+.rail-btn:hover{ color: var(--text); background: rgba(255,255,255,0.03); }
+.rail-btn.active{
+  color: var(--vital);
+  background: var(--vital-dim);
+  border-color: var(--panel-border-strong);
+}
+.rail-btn.active::before{
+  content:'';
+  position: absolute;
+  left: -12px;
+  width: 3px; height: 20px;
+  border-radius: 2px;
+  background: var(--vital);
+  box-shadow: 0 0 12px var(--vital);
+}
+.rail-btn .tip{
+  position: absolute;
+  left: 62px;
+  padding: 6px 10px;
+  background: #0f1826;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-4px);
+  transition: opacity .15s ease, transform .15s ease;
+  z-index: 50;
+}
+.rail-btn:hover .tip{ opacity: 1; transform: translateX(0); }
+.rail-foot{
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--panel-border);
+  display:flex; align-items:center; justify-content:center;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+/* ---------- Main ---------- */
+.main{ min-width: 0; }
+.topbar{
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 22px 36px;
+  border-bottom: 1px solid var(--panel-border);
+}
+.topbar-left h1{
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.topbar-left p{
+  font-size: 12.5px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+.topbar-right{ display:flex; align-items:center; gap: 22px; }
+.live-pill{
+  display:flex; align-items:center; gap: 8px;
+  padding: 7px 13px;
+  border-radius: 100px;
+  border: 1px solid var(--panel-border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.dot{ width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); box-shadow: none; transition: background .2s ease, box-shadow .2s ease; }
+.dot.online{ background: var(--vital); box-shadow: 0 0 8px var(--vital); }
+.dot.offline{ background: var(--alert); box-shadow: 0 0 8px var(--alert); }
+.dot.pulse{ animation: pulseDot 2s ease-in-out infinite; }
+@keyframes pulseDot{ 0%,100%{ opacity:1; } 50%{ opacity:.35; } }
+.clock{ font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
+
+.view{ padding: 28px 36px 60px; display: none; }
+.view.active{ display: block; animation: viewIn .35s ease; }
+@keyframes viewIn{ from{ opacity:0; transform: translateY(6px);} to{ opacity:1; transform:none; } }
+
+/* ---------- Panels / bento grid ---------- */
+.panel{
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  backdrop-filter: blur(14px);
+  padding: 22px 24px;
+  position: relative;
+  overflow: hidden;
+}
+.panel-head{
+  display:flex; align-items:baseline; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.panel-title{ font-family: var(--font-display); font-size: 14px; font-weight: 600; color: var(--text); }
+.panel-sub{ font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+
+.grid-overview{
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.grid-tri{
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (max-width: 1100px){
+  .grid-overview{ grid-template-columns: 1fr; }
+  .grid-tri{ grid-template-columns: 1fr; }
+}
+
+/* Hero waveform panel */
+.hero-panel{ min-height: 230px; display:flex; flex-direction:column; justify-content: space-between; }
+.hero-top{ display:flex; align-items:flex-start; justify-content: space-between; }
+.hero-eyebrow{ font-family: var(--font-mono); font-size: 11px; color: var(--vital); letter-spacing: 0.5px; }
+.hero-fig{ font-family: var(--font-mono); font-size: 40px; font-weight: 500; line-height: 1; margin-top: 6px; }
+.hero-fig span{ font-size: 18px; color: var(--text-muted); }
+.hero-desc{ font-size: 12.5px; color: var(--text-muted); max-width: 260px; margin-top: 8px; line-height: 1.5; }
+.wave-wrap{ width: 100%; height: 92px; margin-top: 10px; }
+.wave-wrap svg{ width: 100%; height: 100%; display:block; }
+
+/* Readout side panel (stat stack) */
+.stat-stack{ display:flex; flex-direction: column; gap: 14px; height: 100%; justify-content: center; }
+.stat-row{ display:flex; align-items:center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid var(--panel-border); }
+.stat-row:last-child{ border-bottom:none; padding-bottom:0; }
+.stat-label{ font-size: 12px; color: var(--text-muted); }
+.stat-value{ font-family: var(--font-mono); font-size: 20px; font-weight: 500; }
+.stat-value.vital{ color: var(--vital); }
+.stat-value.alert{ color: var(--alert); }
+
+/* small stat cards */
+.mini-stat{ }
+.mini-stat .k{ font-family: var(--font-mono); font-size: 26px; font-weight: 500; }
+.mini-stat .l{ font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+.mini-stat .bar{ height: 4px; border-radius: 3px; background: rgba(255,255,255,0.06); margin-top: 12px; overflow:hidden; }
+.mini-stat .bar-fill{ height: 100%; border-radius: 3px; }
+
+canvas{ max-width: 100%; }
+
+/* ---------- Badges ---------- */
+.badge{
+  display:inline-flex; align-items:center; gap: 6px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 100px;
+  font-size: 11.5px;
+  font-family: var(--font-mono);
+  border: 1px solid transparent;
+}
+.badge .d{ width:6px; height:6px; border-radius: 50%; }
+.badge.high{ color: var(--alert); background: var(--alert-dim); border-color: rgba(255,107,74,0.28); }
+.badge.high .d{ background: var(--alert); box-shadow: 0 0 6px var(--alert); }
+.badge.medium{ color: var(--medium); background: var(--medium-dim); border-color: rgba(255,184,77,0.28); }
+.badge.medium .d{ background: var(--medium); }
+.badge.low{ color: var(--vital); background: var(--vital-dim); border-color: rgba(0,229,199,0.24); }
+.badge.low .d{ background: var(--vital); }
+
+/* ---------- Predict view ---------- */
+.predict-grid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 980px){ .predict-grid{ grid-template-columns: 1fr; } }
+
+.field{ margin-bottom: 16px; }
+.field label{ display:flex; justify-content: space-between; font-size: 12.5px; color: var(--text-muted); margin-bottom: 8px; }
+.field label b{ color: var(--text); font-family: var(--font-mono); font-weight: 500; }
+.field input[type=range]{
+  -webkit-appearance: none;
+  width: 100%; height: 4px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.08);
+  outline: none;
+}
+.field input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--vital);
+  box-shadow: 0 0 10px rgba(0,229,199,0.6);
+  cursor: pointer;
+  border: 2px solid #05130f;
+}
+.field input[type=number]{
+  width: 100%;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.field select{
+  width: 100%;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+.two-col{ display:grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.btn-primary{
+  width: 100%;
+  padding: 13px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, var(--vital), #00b5a0);
+  color: #04120f;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  margin-top: 6px;
+  transition: transform .12s ease, box-shadow .12s ease;
+  box-shadow: 0 0 0 rgba(0,229,199,0);
+}
+.btn-primary:hover{ transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0,229,199,0.25); }
+.btn-primary:active{ transform: translateY(0); }
+.btn-primary:disabled{ opacity: .5; cursor: default; transform:none; box-shadow:none; }
+
+.result-panel{ min-height: 420px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; position:relative; }
+.result-empty{ color: var(--text-faint); font-size: 13px; }
+.gauge-wrap{ position: relative; width: 200px; height: 200px; }
+.gauge-wrap svg{ width:100%; height:100%; transform: rotate(-90deg); }
+.gauge-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.gauge-fig{ font-family: var(--font-mono); font-size: 26px; font-weight: 600; }
+.gauge-sub{ font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+.result-risk{ margin-top: 18px; }
+.result-rec{ margin-top: 14px; font-size: 13px; color: var(--text-muted); max-width: 340px; line-height: 1.55; }
+
+/* ---------- Upload view ---------- */
+.dropzone{
+  border: 1.5px dashed var(--panel-border);
+  border-radius: 14px;
+  padding: 46px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.dropzone:hover, .dropzone.drag{ border-color: var(--panel-border-strong); background: rgba(0,229,199,0.03); }
+.dropzone svg{ width: 30px; height:30px; color: var(--text-muted); margin-bottom: 12px; }
+.dropzone h3{ font-family: var(--font-display); font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.dropzone p{ font-size: 12.5px; color: var(--text-muted); }
+.dropzone input{ display:none; }
+.dz-link{ color: var(--vital); }
+
+.job-console{ margin-top: 20px; }
+.progress-track{ height: 6px; border-radius: 4px; background: rgba(255,255,255,0.06); overflow:hidden; margin: 14px 0 10px; }
+.progress-fill{ height:100%; background: linear-gradient(90deg, var(--vital), #6ee7ff); border-radius: 4px; transition: width .3s ease; }
+.job-meta{ display:flex; justify-content: space-between; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); }
+.job-meta b{ color: var(--text); }
+.feed{
+  margin-top: 16px;
+  border-top: 1px solid var(--panel-border);
+  padding-top: 12px;
+  max-height: 180px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  display:flex; flex-direction: column; gap: 6px;
+}
+.feed div span{ color: var(--vital); }
+
+/* ---------- Table ---------- */
+.table-wrap{ overflow-x: auto; }
+table{ width: 100%; border-collapse: collapse; font-size: 13px; }
+th{
+  text-align: left;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--panel-border);
+  white-space: nowrap;
+}
+td{ padding: 11px 14px; border-bottom: 1px solid rgba(120,170,190,0.06); font-family: var(--font-mono); font-size: 12.5px; white-space: nowrap; }
+tr:hover td{ background: rgba(255,255,255,0.015); }
+.filter-row{ display:flex; gap: 8px; margin-bottom: 16px; }
+.chip{
+  padding: 7px 14px;
+  border-radius: 100px;
+  border: 1px solid var(--panel-border);
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: transparent;
+}
+.chip.active{ border-color: var(--panel-border-strong); color: var(--vital); background: var(--vital-dim); }
+.empty-state{ padding: 40px 0; text-align:center; color: var(--text-faint); font-size: 13px; }
+
+/* ---------- Model view ---------- */
+.model-row{
+  display:flex; align-items:center; justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--panel-border);
+}
+.model-row:last-child{ border-bottom:none; }
+.model-name{ display:flex; align-items:center; gap:10px; font-size: 13.5px; }
+.model-name .tag{ font-family: var(--font-mono); font-size: 9.5px; padding: 2px 7px; border-radius: 5px; background: var(--vital-dim); color: var(--vital); border: 1px solid var(--panel-border-strong); }
+.model-metrics{ display:flex; gap: 26px; font-family: var(--font-mono); font-size: 12.5px; color: var(--text-muted); }
+.model-metrics b{ color: var(--text); }
+
+.imp-row{ margin-bottom: 13px; }
+.imp-label{ display:flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+.imp-label b{ color: var(--text); font-family: var(--font-mono); }
+.imp-track{ height: 6px; border-radius: 4px; background: rgba(255,255,255,0.05); overflow: hidden; }
+.imp-fill{ height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--violet), var(--vital)); }
+
+.arch-strip{
+  display:flex; align-items:center; gap: 6px; flex-wrap: wrap;
+  font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted);
+  margin-top: 10px;
+}
+.arch-node{ padding: 6px 11px; border: 1px solid var(--panel-border); border-radius: 8px; }
+.arch-arrow{ color: var(--text-faint); }
+
+.toast{
+  position: fixed; bottom: 26px; right: 26px;
+  background: #0f1826; border: 1px solid var(--panel-border-strong);
+  padding: 13px 18px; border-radius: 10px;
+  font-size: 12.5px; color: var(--text);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  transform: translateY(20px); opacity:0; pointer-events:none;
+  transition: all .25s ease;
+  z-index: 100;
+  max-width: 320px;
+}
+.toast.show{ transform: translateY(0); opacity:1; }
+.toast.err{ border-color: rgba(255,107,74,0.5); }
+
+@media (max-width: 720px){
+  .shell{ grid-template-columns: 64px 1fr; }
+  .view{ padding: 20px 16px 50px; }
+  .topbar{ padding: 18px 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- Nav rail -->
+  <nav class="rail">
+    <div class="rail-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#00e5c7" stroke-width="1.8"><path d="M3 12h4l2-7 4 14 2-7h6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="rail-nav">
+      <button class="rail-btn active" data-view="overview">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span class="tip">Overview</span>
+      </button>
+      <button class="rail-btn" data-view="predict">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" stroke-linecap="round"/></svg>
+        <span class="tip">Predict Cost</span>
+      </button>
+      <button class="rail-btn" data-view="upload">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3" stroke-linecap="round"/></svg>
+        <span class="tip">Bulk Upload</span>
+      </button>
+      <button class="rail-btn" data-view="patients">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke-linecap="round"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke-linecap="round"/></svg>
+        <span class="tip">Patients</span>
+      </button>
+      <button class="rail-btn" data-view="model">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 2l8 4.5v9L12 20l-8-4.5v-9L12 2z"/><path d="M12 8v8M8 10l4-2 4 2M8 14l4 2 4-2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="tip">Model Insights</span>
+      </button>
+    </div>
+    <div class="rail-foot">λ</div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1 id="pageTitle">Portfolio Overview</h1>
+        <p id="pageSub">Predicted cost and utilization across your patient population</p>
+      </div>
+      <div class="topbar-right">
+        <div class="live-pill" id="telemetryPill" title="Checking backend health"><span class="dot pulse" id="telemetryDot"></span><span id="telemetryText">TELEMETRY CHECKING</span></div>
+        <div class="clock" id="clock">--:--:--</div>
+      </div>
+    </div>
+
+    <!-- ===================== OVERVIEW ===================== -->
+    <section class="view active" id="view-overview">
+      <div class="grid-overview">
+        <div class="panel hero-panel">
+          <div class="hero-top">
+            <div>
+              <div class="hero-eyebrow">PORTFOLIO PREDICTED SPEND</div>
+              <div class="hero-fig" id="heroAvgCost">$0<span>/ patient / yr</span></div>
+              <div class="hero-desc">Rolling estimate across every prediction stored locally, from single patients and bulk claim batches alike.</div>
+            </div>
+          </div>
+          <div class="wave-wrap"><svg id="waveSvg" viewBox="0 0 600 92" preserveAspectRatio="none"></svg></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><div class="panel-title">Population Snapshot</div><div class="panel-sub">Scored to date</div></div></div>
+          <div class="stat-stack">
+            <div class="stat-row"><span class="stat-label">Total patients scored</span><span class="stat-value" id="statTotal">0</span></div>
+            <div class="stat-row"><span class="stat-label">High-risk patients</span><span class="stat-value alert" id="statHigh">0</span></div>
+            <div class="stat-row"><span class="stat-label">Model in production</span><span class="stat-value vital" id="statModel">—</span></div>
+            <div class="stat-row"><span class="stat-label">Model R²</span><span class="stat-value" id="statR2">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-tri">
+        <div class="panel mini-stat">
+          <div class="l">Low risk</div>
+          <div class="k" id="miniLow" style="color:var(--vital)">0</div>
+          <div class="bar"><div class="bar-fill" id="miniLowBar" style="width:0%;background:var(--vital)"></div></div>
+        </div>
+        <div class="panel mini-stat">
+          <div class="l">Medium risk</div>
+          <div class="k" id="miniMed" style="color:var(--medium)">0</div>
+          <div class="bar"><div class="bar-fill" id="miniMedBar" style="width:0%;background:var(--medium)"></div></div>
+        </div>
+        <div class="panel mini-stat">
+          <div class="l">High risk</div>
+          <div class="k" id="miniHigh" style="color:var(--alert)">0</div>
+          <div class="bar"><div class="bar-fill" id="miniHighBar" style="width:0%;background:var(--alert)"></div></div>
+        </div>
+      </div>
+
+      <div class="grid-overview">
+        <div class="panel">
+          <div class="panel-head"><div><div class="panel-title">Predicted Cost Distribution</div><div class="panel-sub">Patients scored, grouped by projected annual spend</div></div></div>
+          <canvas id="distChart" height="130"></canvas>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><div class="panel-title">What Drives Cost</div><div class="panel-sub">Top model features</div></div></div>
+          <canvas id="miniImpChart" height="130"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== PREDICT ===================== -->
+    <section class="view" id="view-predict">
+      <div class="predict-grid">
+        <div class="panel">
+          <div class="panel-head"><div><div class="panel-title">Patient Profile</div><div class="panel-sub">Enter claims history to estimate next-year cost</div></div></div>
+
+          <div class="field">
+            <label>Age <b id="ageVal">72</b></label>
+            <input type="range" id="age" min="65" max="100" value="72">
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label>Sex</label>
+              <select id="sex"><option value="0">Female</option><option value="1">Male</option></select>
+            </div>
+            <div class="field">
+              <label>Chronic conditions <b id="ccVal">2</b></label>
+              <input type="range" id="chronic_condition_count" min="0" max="11" value="2">
+            </div>
+          </div>
+          <div class="two-col">
+            <div class="field">
+              <label>Prior inpatient visits <b id="ipVal">0</b></label>
+              <input type="range" id="prior_inpatient_visits" min="0" max="12" value="0">
+            </div>
+            <div class="field">
+              <label>Prior outpatient visits <b id="opVal">4</b></label>
+              <input type="range" id="prior_outpatient_visits" min="0" max="60" value="4">
+            </div>
+          </div>
+          <div class="field">
+            <label>Prior year reimbursement (USD)</label>
+            <input type="number" id="prior_reimbursement" value="3200" min="0" step="50">
+          </div>
+
+          <button class="btn-primary" id="predictBtn">Run cost prediction</button>
+        </div>
+
+        <div class="panel result-panel" id="resultPanel">
+          <div class="result-empty" id="resultEmpty">Set a patient profile and run a prediction<br>to see the projected cost and risk tier.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== UPLOAD ===================== -->
+    <section class="view" id="view-upload">
+      <div class="panel">
+        <div class="panel-head"><div><div class="panel-title">Bulk Claims Upload</div><div class="panel-sub">Simulates Cloud Storage → Pub/Sub → Cloud Run async scoring</div></div></div>
+
+        <div class="dropzone" id="dropzone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4M12 4l-4 4M12 4l4 4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3" stroke-linecap="round"/></svg>
+          <h3>Drop a claims CSV here</h3>
+          <p>or click to browse · needs age, sex, chronic_condition_count, prior_inpatient_visits, prior_outpatient_visits, prior_reimbursement</p>
+          <p style="margin-top:10px"><a href="#" class="dz-link" id="sampleLink">Download a sample CSV</a></p>
+          <input type="file" id="fileInput" accept=".csv">
+        </div>
+
+        <div class="job-console" id="jobConsole" style="display:none">
+          <div class="job-meta">
+            <span>Job <b id="jobId">—</b></span>
+            <span><b id="jobStatus">queued</b></span>
+            <span><b id="jobProgress">0/0</b> records</span>
+          </div>
+          <div class="progress-track"><div class="progress-fill" id="jobBar" style="width:0%"></div></div>
+          <div class="feed" id="jobFeed"></div>
+        </div>
+      </div>
+
+      <div class="panel" id="uploadResultsPanel" style="display:none; margin-top:16px;">
+        <div class="panel-head"><div><div class="panel-title">Batch Results</div><div class="panel-sub" id="uploadResultsSub">Highest projected cost first</div></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Age</th><th>Chronic</th><th>Inpt.</th><th>Outpt.</th><th>Predicted cost</th><th>Risk</th></tr></thead>
+            <tbody id="uploadResultsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== PATIENTS ===================== -->
+    <section class="view" id="view-patients">
+      <div class="panel">
+        <div class="panel-head"><div><div class="panel-title">Scored Patients</div><div class="panel-sub">Stored predictions, most recent first</div></div>
+          <button class="chip" id="refreshPatients" style="border-color:var(--panel-border-strong); color:var(--vital)">Refresh</button>
+        </div>
+        <div class="filter-row">
+          <button class="chip active" data-risk="">All</button>
+          <button class="chip" data-risk="high">High risk</button>
+          <button class="chip" data-risk="medium">Medium risk</button>
+          <button class="chip" data-risk="low">Low risk</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Age</th><th>Sex</th><th>Chronic</th><th>Inpt.</th><th>Outpt.</th><th>Prior reimb.</th><th>Predicted cost</th><th>Percentile</th><th>Risk</th></tr></thead>
+            <tbody id="patientsBody"></tbody>
+          </table>
+          <div class="empty-state" id="patientsEmpty" style="display:none">No patients scored yet — run a prediction or bulk upload to populate this view.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== MODEL ===================== -->
+    <section class="view" id="view-model">
+      <div class="grid-overview">
+        <div class="panel">
+          <div class="panel-head"><div><div class="panel-title">Model Registry</div><div class="panel-sub">Candidates trained and compared on held-out data</div></div></div>
+          <div id="modelList"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><div><div class="panel-title">Feature Importance</div><div class="panel-sub">Selected model</div></div></div>
+          <div id="impList"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div><div class="panel-title">Processing Architecture</div><div class="panel-sub">Simulated in this demo; maps directly to the GCP design</div></div></div>
+        <div class="arch-strip">
+          <span class="arch-node">Upload / API</span><span class="arch-arrow">→</span>
+          <span class="arch-node">Cloud Storage · FastAPI</span><span class="arch-arrow">→</span>
+          <span class="arch-node">Pub/Sub</span><span class="arch-arrow">→</span>
+          <span class="arch-node">Cloud Run</span><span class="arch-arrow">→</span>
+          <span class="arch-node">ML Model</span><span class="arch-arrow">→</span>
+          <span class="arch-node">Cloud SQL / BigQuery</span><span class="arch-arrow">→</span>
+          <span class="arch-node">Dashboard</span>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API_BASE = window.API_BASE || 'http://127.0.0.1:8000';
+
+/* ---------- Navigation ---------- */
+const titles = {
+  overview: ['Portfolio Overview', 'Predicted cost and utilization across your patient population'],
+  predict: ['Predict Cost', 'Score a single patient from claims history'],
+  upload: ['Bulk Upload', 'Simulate month-end claims batches through the async pipeline'],
+  patients: ['Patients', 'Every patient scored this session'],
+  model: ['Model Insights', 'Compare candidate models and see what drives cost'],
+};
+document.querySelectorAll('.rail-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const view = btn.dataset.view;
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + view).classList.add('active');
+    document.getElementById('pageTitle').textContent = titles[view][0];
+    document.getElementById('pageSub').textContent = titles[view][1];
+    if(view === 'patients') loadPatients();
+    if(view === 'model') loadModelInsights();
+    if(view === 'overview') loadOverview();
+  });
+});
+
+/* ---------- Clock ---------- */
+function tickClock(){
+  document.getElementById('clock').textContent = new Date().toLocaleTimeString('en-US', {hour12:false});
+}
+setInterval(tickClock, 1000); tickClock();
+
+/* ---------- Backend telemetry ---------- */
+const telemetryDot = document.getElementById('telemetryDot');
+const telemetryText = document.getElementById('telemetryText');
+const telemetryPill = document.getElementById('telemetryPill');
+
+function setTelemetryStatus(isOnline){
+  telemetryDot.classList.remove('online', 'offline');
+  telemetryDot.classList.add(isOnline ? 'online' : 'offline');
+  telemetryDot.classList.toggle('pulse', isOnline);
+  telemetryText.textContent = isOnline ? 'TELEMETRY LIVE' : 'TELEMETRY OFFLINE';
+  telemetryPill.title = isOnline
+    ? 'Backend API is reachable'
+    : 'Backend API is not reachable';
+}
+
+async function checkBackendHealth(){
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 2500);
+  try{
+    const res = await fetch(API_BASE + '/api/health', {
+      method: 'GET',
+      cache: 'no-store',
+      signal: controller.signal
+    });
+    setTelemetryStatus(res.ok);
+  }catch(e){
+    setTelemetryStatus(false);
+  }finally{
+    clearTimeout(timeoutId);
+  }
+}
+
+checkBackendHealth();
+setInterval(checkBackendHealth, 5000);
+
+/* ---------- Toast ---------- */
+function toast(msg, isErr){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  setTimeout(() => t.classList.remove('show'), 3400);
+}
+
+/* ---------- Fetch helper ---------- */
+async function api(path, opts){
+  const res = await fetch(API_BASE + path, opts);
+  if(!res.ok){
+    let msg = 'Request failed';
+    try{ const j = await res.json(); msg = j.detail || msg; }catch(e){}
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+function money(v){
+  return '$' + Math.round(v).toLocaleString('en-US');
+}
+
+/* ---------- Hero waveform (single orchestrated motion) ---------- */
+const waveSvg = document.getElementById('waveSvg');
+function buildWave(){
+  const points = 60;
+  let d1 = '', d2 = '';
+  for(let i=0;i<points;i++){
+    const x = (i/(points-1))*600;
+    d1 += (i===0?'M':'L') + x + ' ' + (46 + Math.sin(i*0.5)*10) + ' ';
+  }
+  waveSvg.innerHTML = `
+    <defs>
+      <linearGradient id="waveGrad" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#00e5c7" stop-opacity="0.05"/>
+        <stop offset="50%" stop-color="#00e5c7" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="#8b7cff" stop-opacity="0.4"/>
+      </linearGradient>
+    </defs>
+    <path id="wavePath" d="" fill="none" stroke="url(#waveGrad)" stroke-width="1.6"/>
+    <path id="wavePath2" d="" fill="none" stroke="#8b7cff" stroke-width="1" opacity="0.25"/>
+  `;
+  animateWave();
+}
+let waveT = 0;
+function animateWave(){
+  const path = document.getElementById('wavePath');
+  const path2 = document.getElementById('wavePath2');
+  if(!path) return;
+  waveT += 0.045;
+  const points = 80;
+  let d = '', d2 = '';
+  for(let i=0;i<points;i++){
+    const x = (i/(points-1))*600;
+    const y = 46
+      + Math.sin(i*0.28 + waveT) * 9
+      + Math.sin(i*0.09 + waveT*0.6) * 14
+      + (Math.sin(i*1.4 - waveT*2) > 0.965 ? -16 : 0);
+    d += (i===0?'M':'L') + x.toFixed(1) + ' ' + y.toFixed(1) + ' ';
+    const y2 = 46 + Math.sin(i*0.2 - waveT*0.7) * 6;
+    d2 += (i===0?'M':'L') + x.toFixed(1) + ' ' + y2.toFixed(1) + ' ';
+  }
+  path.setAttribute('d', d);
+  path2.setAttribute('d', d2);
+  requestAnimationFrame(animateWave);
+}
+buildWave();
+
+/* ---------- Overview ---------- */
+let distChart, miniImpChart;
+
+function ensureChartJs(){
+  if(typeof Chart === 'undefined'){
+    throw new Error('Chart.js failed to load. Check your internet connection or CDN access.');
+  }
+}
+
+async function loadOverview(){
+  try{
+    const stats = await api('/api/dashboard/stats');
+    document.getElementById('heroAvgCost').innerHTML = money(stats.avg_predicted_cost) + '<span>/ patient / yr</span>';
+    document.getElementById('statTotal').textContent = stats.total_patients;
+    document.getElementById('statHigh').textContent = stats.high_risk_count;
+    document.getElementById('statModel').textContent = stats.model_name;
+    document.getElementById('statR2').textContent = stats.model_r2.toFixed(3);
+
+    const total = Math.max(stats.total_patients, 1);
+    document.getElementById('miniLow').textContent = stats.low_risk_count;
+    document.getElementById('miniMed').textContent = stats.medium_risk_count;
+    document.getElementById('miniHigh').textContent = stats.high_risk_count;
+    document.getElementById('miniLowBar').style.width = (stats.low_risk_count/total*100)+'%';
+    document.getElementById('miniMedBar').style.width = (stats.medium_risk_count/total*100)+'%';
+    document.getElementById('miniHighBar').style.width = (stats.high_risk_count/total*100)+'%';
+  }catch(e){ /* backend not reachable yet */ }
+
+  try{
+    ensureChartJs();
+    const dist = await api('/api/dashboard/cost-distribution');
+    const ctx = document.getElementById('distChart');
+    const data = { labels: dist.map(d=>d.label), datasets: [{ data: dist.map(d=>d.count), backgroundColor: 'rgba(0,229,199,0.55)', borderRadius: 5, maxBarThickness: 40 }] };
+    if(distChart) distChart.destroy();
+    distChart = new Chart(ctx, { type: 'bar', data, options: chartOpts(false) });
+  }catch(e){
+    console.error("Dashboard chart error:", e);
+  }
+
+  try{
+    ensureChartJs();
+    const imp = await api('/api/dashboard/feature-importance');
+    const top = imp.slice(0,5);
+    const ctx = document.getElementById('miniImpChart');
+    const data = { labels: top.map(d=>prettyFeature(d.feature)), datasets: [{ data: top.map(d=>d.importance), backgroundColor: 'rgba(139,124,255,0.55)', borderRadius: 5, maxBarThickness: 26 }] };
+    if(miniImpChart) miniImpChart.destroy();
+    miniImpChart = new Chart(ctx, { type: 'bar', data, options: { ...chartOpts(true) } });
+  }catch(e){
+    console.error("Dashboard chart error:", e);
+  }
+}
+function chartOpts(horizontal){
+  return {
+    indexAxis: horizontal ? 'y' : 'x',
+    responsive: true,
+    maintainAspectRatio: true,
+    animation: { duration: 500 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor:'#0f1826',
+        borderColor:'rgba(120,170,190,0.2)',
+        borderWidth:1,
+        titleFont:{family:"'IBM Plex Mono'"},
+        bodyFont:{family:"'IBM Plex Mono'"}
+      }
+    },
+    scales: {
+      x: {
+        beginAtZero: true,
+        grid: { color: 'rgba(120,170,190,0.08)' },
+        ticks: { color: '#7386a0', font: { family:"'IBM Plex Mono'", size: 10.5 } }
+      },
+      y: {
+        beginAtZero: true,
+        grid: { color: 'rgba(120,170,190,0.06)' },
+        ticks: { color: '#7386a0', font: { family:"'IBM Plex Mono'", size: 10.5 } }
+      }
+    }
+  };
+}
+function prettyFeature(f){
+  return f.replace(/_/g,' ').replace(/\b\w/g, c=>c.toUpperCase());
+}
+
+/* ---------- Predict ---------- */
+const sliderIds = {
+  age: 'ageVal', chronic_condition_count: 'ccVal', prior_inpatient_visits: 'ipVal',
+  prior_outpatient_visits: 'opVal'
+};
+Object.keys(sliderIds).forEach(id => {
+  const el = document.getElementById(id);
+  const label = document.getElementById(sliderIds[id]);
+  el.addEventListener('input', () => label.textContent = el.value);
+});
+
+document.getElementById('predictBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('predictBtn');
+  btn.disabled = true; btn.textContent = 'Scoring…';
+  const payload = {
+    age: +document.getElementById('age').value,
+    sex: +document.getElementById('sex').value,
+    chronic_condition_count: +document.getElementById('chronic_condition_count').value,
+    prior_inpatient_visits: +document.getElementById('prior_inpatient_visits').value,
+    prior_outpatient_visits: +document.getElementById('prior_outpatient_visits').value,
+    prior_reimbursement: +document.getElementById('prior_reimbursement').value,
+  };
+  try{
+    const result = await api('/api/predict', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    renderResult(result);
+    toast('Prediction complete');
+  }catch(e){
+    toast(e.message || 'Could not reach the API — is the backend running?', true);
+  }
+  btn.disabled = false; btn.textContent = 'Run cost prediction';
+});
+
+function renderResult(result){
+  const panel = document.getElementById('resultPanel');
+  const riskColor = { high: 'var(--alert)', medium: 'var(--medium)', low: 'var(--vital)' }[result.risk_level];
+  const pct = Math.max(4, Math.min(100, result.percentile));
+  const circumference = 2 * Math.PI * 82;
+  const offset = circumference * (1 - pct/100);
+  panel.innerHTML = `
+    <div class="gauge-wrap">
+      <svg viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="82" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
+        <circle cx="100" cy="100" r="82" fill="none" stroke="${riskColor}" stroke-width="10" stroke-linecap="round"
+          stroke-dasharray="${circumference}" stroke-dashoffset="${circumference}" style="transition: stroke-dashoffset 1s ease"/>
+      </svg>
+      <div class="gauge-center">
+        <div class="gauge-fig">${money(result.predicted_cost)}</div>
+        <div class="gauge-sub">EST. ANNUAL COST</div>
+      </div>
+    </div>
+    <div class="result-risk">
+      <span class="badge ${result.risk_level}"><span class="d"></span>${result.risk_level.toUpperCase()} RISK · ${result.percentile}th percentile</span>
+    </div>
+    <div class="result-rec">${result.recommendation}</div>
+  `;
+  requestAnimationFrame(() => {
+    const circle = panel.querySelectorAll('circle')[1];
+    circle.setAttribute('stroke-dashoffset', offset);
+  });
+}
+
+/* ---------- Upload ---------- */
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if(e.dataTransfer.files.length) handleUpload(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => { if(fileInput.files.length) handleUpload(fileInput.files[0]); });
+
+document.getElementById('sampleLink').addEventListener('click', async (e) => {
+  e.preventDefault();
+  try{
+    const data = await api('/api/upload/sample-csv');
+    const blob = new Blob([data.content], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = data.filename; a.click();
+    URL.revokeObjectURL(url);
+  }catch(e){ toast('Could not reach the API — is the backend running?', true); }
+});
+
+let pollTimer = null;
+async function handleUpload(file){
+  const feed = document.getElementById('jobFeed');
+  feed.innerHTML = '';
+  document.getElementById('jobConsole').style.display = 'block';
+  document.getElementById('uploadResultsPanel').style.display = 'none';
+  logFeed(`Uploading ${file.name}…`);
+
+  const form = new FormData();
+  form.append('file', file);
+  let job;
+  try{
+    job = await api('/api/upload/bulk', { method: 'POST', body: form });
+  }catch(e){
+    toast(e.message || 'Upload failed', true);
+    logFeed('ERROR: ' + (e.message || 'upload failed'));
+    return;
+  }
+  document.getElementById('jobId').textContent = job.id;
+  logFeed(`Job <span>${job.id}</span> queued · ${job.total_records} records`);
+  logFeed('Publishing batches to Pub/Sub…');
+
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(() => pollJob(job.id), 500);
+}
+
+async function pollJob(jobId){
+  try{
+    const job = await api(`/api/jobs/${jobId}`);
+    document.getElementById('jobStatus').textContent = job.status;
+    document.getElementById('jobProgress').textContent = `${job.processed_records}/${job.total_records}`;
+    const pct = job.total_records ? (job.processed_records/job.total_records*100) : 0;
+    document.getElementById('jobBar').style.width = pct + '%';
+
+    if(job.status === 'processing' && job.processed_records > 0){
+      logFeed(`Cloud Run scored <span>${job.processed_records}</span>/${job.total_records} · ${job.high_risk_found} high-risk found so far`);
+    }
+
+    if(job.status === 'completed'){
+      clearInterval(pollTimer);
+      document.getElementById('jobBar').style.width = '100%';
+      const skipped = Math.max(job.total_records - job.processed_records, 0);
+      logFeed(`Job complete — <span>${job.processed_records}</span> valid rows scored · ${skipped} invalid rows skipped · <span>${job.high_risk_found}</span> high-risk patients identified`);
+      toast('Bulk job completed');
+      const results = await api(`/api/jobs/${jobId}/results`);
+      renderUploadResults(results);
+      loadOverview();
+    }
+    if(job.status === 'failed'){
+      clearInterval(pollTimer);
+      logFeed('ERROR: ' + job.error_message);
+      toast('Bulk job failed: ' + job.error_message, true);
+    }
+  }catch(e){
+    clearInterval(pollTimer);
+  }
+}
+function logFeed(html){
+  const feed = document.getElementById('jobFeed');
+  const line = document.createElement('div');
+  line.innerHTML = `[${new Date().toLocaleTimeString('en-US',{hour12:false})}] ${html}`;
+  feed.appendChild(line);
+  feed.scrollTop = feed.scrollHeight;
+}
+function renderUploadResults(rows){
+  const panel = document.getElementById('uploadResultsPanel');
+  const body = document.getElementById('uploadResultsBody');
+  body.innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.age}</td><td>${r.chronic_condition_count}</td><td>${r.prior_inpatient_visits}</td><td>${r.prior_outpatient_visits}</td>
+      <td>${money(r.predicted_cost)}</td>
+      <td><span class="badge ${r.risk_level}"><span class="d"></span>${r.risk_level}</span></td>
+    </tr>`).join('');
+  panel.style.display = 'block';
+}
+
+/* ---------- Patients ---------- */
+let currentRiskFilter = '';
+document.querySelectorAll('#view-patients .chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('#view-patients .chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    currentRiskFilter = chip.dataset.risk;
+    loadPatients();
+  });
+});
+document.getElementById('refreshPatients').addEventListener('click', loadPatients);
+
+async function loadPatients(){
+  const body = document.getElementById('patientsBody');
+  const empty = document.getElementById('patientsEmpty');
+  try{
+    const q = currentRiskFilter ? `?risk=${currentRiskFilter}` : '';
+    const rows = await api('/api/dashboard/patients' + q);
+    if(!rows.length){ body.innerHTML=''; empty.style.display='block'; return; }
+    empty.style.display = 'none';
+    body.innerHTML = rows.map(r => `
+      <tr>
+        <td>#${r.id}</td><td>${r.age}</td><td>${r.sex===1?'M':'F'}</td><td>${r.chronic_condition_count}</td>
+        <td>${r.prior_inpatient_visits}</td><td>${r.prior_outpatient_visits}</td>
+        <td>${money(r.prior_reimbursement)}</td><td>${money(r.predicted_cost)}</td><td>${r.percentile}th</td>
+        <td><span class="badge ${r.risk_level}"><span class="d"></span>${r.risk_level}</span></td>
+      </tr>`).join('');
+  }catch(e){
+    toast('Could not reach the API — is the backend running?', true);
+  }
+}
+
+/* ---------- Model insights ---------- */
+async function loadModelInsights(){
+  try{
+    const models = await api('/api/dashboard/model-comparison');
+    document.getElementById('modelList').innerHTML = models.map(m => `
+      <div class="model-row">
+        <div class="model-name">${m.name} ${m.is_selected ? '<span class="tag">SELECTED</span>' : ''}</div>
+        <div class="model-metrics"><span>R² <b>${m.r2.toFixed(3)}</b></span><span>RMSE <b>${money(m.rmse)}</b></span><span>MAE <b>${money(m.mae)}</b></span></div>
+      </div>`).join('');
+  }catch(e){ toast('Could not reach the API — is the backend running?', true); }
+
+  try{
+    const imp = await api('/api/dashboard/feature-importance');
+    const max = Math.max(...imp.map(i=>i.importance));
+    document.getElementById('impList').innerHTML = imp.map(i => `
+      <div class="imp-row">
+        <div class="imp-label"><span>${prettyFeature(i.feature)}</span><b>${(i.importance*100).toFixed(1)}%</b></div>
+        <div class="imp-track"><div class="imp-fill" style="width:${(i.importance/max*100)}%"></div></div>
+      </div>`).join('');
+  }catch(e){}
+}
+
+/* ---------- Init ---------- */
+loadOverview();
+</script>
+</body>
+</html>

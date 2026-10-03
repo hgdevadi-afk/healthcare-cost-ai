@@ -1,0 +1,45 @@
+{
+    "best_model": "Gradient Boosting",
+    "models": {
+        "Linear Regression": {
+            "rmse": 7755.483191339084,
+            "mae": 3702.9520410579,
+            "r2": 0.22235971907230945
+        },
+        "Random Forest": {
+            "rmse": 7773.899951789014,
+            "mae": 3661.312429007988,
+            "r2": 0.21866204633823416
+        },
+        "Gradient Boosting": {
+            "rmse": 7643.570513851013,
+            "mae": 3573.874730862106,
+            "r2": 0.2446407020336664
+        }
+    },
+    "feature_importance": {
+        "prior_reimbursement": 0.6172437286069551,
+        "chronic_condition_count": 0.20722512061650664,
+        "prior_outpatient_visits": 0.11667701463614559,
+        "prior_inpatient_visits": 0.05516956332072483,
+        "age": 0.003043530738658367,
+        "sex": 0.0006410420810094928
+    },
+    "medium_threshold": 4590.33730598696,
+    "high_threshold": 7859.864946433018,
+    "n_train": 76530,
+    "n_test": 19133,
+    "n_total": 95663,
+    "features": [
+        "age",
+        "sex",
+        "chronic_condition_count",
+        "prior_inpatient_visits",
+        "prior_outpatient_visits",
+        "prior_reimbursement"
+    ],
+    "target": "next_year_cost",
+    "dataset": "CMS Medicare DE-SynPUF Sample 1",
+    "prediction_year": 2009,
+    "feature_year": 2008
+}
