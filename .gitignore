@@ -26,3 +26,8 @@ data/
 *.pem
 *.key
 service-account*.json
+
+# Legacy local Windows startup scripts
+setup.ps1
+start-app.ps1
+stop-app.ps1
