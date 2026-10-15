@@ -25,20 +25,37 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # DATABASE CONFIGURATION
 # ============================================================
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "sqlite:///./healthcare_cost.db",
-)
+from google.cloud import secretmanager
+from sqlalchemy.engine import URL
 
-connect_args = (
-    {"check_same_thread": False}
-    if DATABASE_URL.startswith("sqlite")
-    else {}
-)
+PROJECT_ID = "meridian-healthcare-cost"
+SECRET_ID = "healthcare-db-password"
+
+def get_database_url():
+    client = secretmanager.SecretManagerServiceClient()
+    secret_name = (
+        f"projects/{PROJECT_ID}/secrets/{SECRET_ID}/versions/latest"
+    )
+
+    response = client.access_secret_version(
+        request={"name": secret_name}
+    )
+
+    password = response.payload.data.decode("utf-8")
+
+    return URL.create(
+        drivername="postgresql+psycopg2",
+        username="healthcare_app",
+        password=password,
+        host="10.92.0.3",
+        port=5432,
+        database="healthcare_cost",
+    )
 
 engine = create_engine(
-    DATABASE_URL,
-    connect_args=connect_args,
+    get_database_url(),
+    connect_args={"sslmode": "require"},
+    pool_pre_ping=True,
 )
 
 SessionLocal = sessionmaker(

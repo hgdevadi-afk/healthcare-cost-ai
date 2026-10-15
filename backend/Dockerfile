@@ -1,18 +1,18 @@
-FROM python:3.12-slim
+FROM python:3.11-slim
 
 WORKDIR /code
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app ./app
+COPY app/ ./app/
 
-RUN useradd -m appuser && mkdir /data && chown -R appuser /code /data
-
+RUN useradd --create-home --uid 10001 appuser
 USER appuser
-
-ENV DATABASE_URL=sqlite:////data/healthcare_cost.db
 
 EXPOSE 8000
 

@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from .. import schemas
 from ..database import Job, Patient, SessionLocal, get_db
+from ..cloud_storage import upload_csv_to_gcs
 from ..ml.cms_data import FEATURE_COLUMNS
 from ..ml.predictor import get_predictor
 
@@ -289,6 +290,15 @@ async def upload_bulk(
     # ========================================================
 
     job_id = uuid.uuid4().hex[:10]
+
+    # Save the validated CSV to private Cloud Storage first.
+    try:
+        upload_csv_to_gcs(raw, job_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Unable to store the uploaded CSV.",
+        ) from exc
 
     job = Job(
         id=job_id,

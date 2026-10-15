@@ -1,0 +1,16 @@
+services:
+  api:
+    platform: linux/amd64
+    image: us-central1-docker.pkg.dev/meridian-healthcare-cost/my-docker-repo/healthcare-api:v2
+    environment:
+      GCS_UPLOAD_BUCKET: meridian-healthcare-uploads-159331714929
+    restart: unless-stopped
+
+  web:
+    platform: linux/amd64
+    image: us-central1-docker.pkg.dev/meridian-healthcare-cost/my-docker-repo/healthcare-web:v1
+    ports:
+      - "5500:80"
+    depends_on:
+      - api
+    restart: unless-stopped
